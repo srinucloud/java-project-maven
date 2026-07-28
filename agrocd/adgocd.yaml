@@ -8,8 +8,8 @@ spec:
   project: default
 
   source:
-    repoURL: https://github.com/srinucloud/java-project-maven
-    targetRevision: main
+    repoURL: https://github.com/srinucloud/java-project-maven.git
+    targetRevision: HEAD
     path: k8s
 
   destination:

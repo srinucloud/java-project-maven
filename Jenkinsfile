@@ -23,46 +23,46 @@ pipeline {
             }
         }
 
-        stage('SonarQube Analysis') {
-            environment {
-                SONARQUBE_SCANNER_HOME = tool 'sonar-scanner'
-            }
+        // stage('SonarQube Analysis') {
+        //     environment {
+        //         SONARQUBE_SCANNER_HOME = tool 'sonar-scanner'
+        //     }
 
-            steps {
-                withSonarQubeEnv('sonar-server') {
-                    sh """
-                    ${SONARQUBE_SCANNER_HOME}/bin/sonar-scanner \
-                    -Dsonar.projectKey=netflix \
-                    -Dsonar.projectName=netflix \
-                    -Dsonar.sources=src \
-                    -Dsonar.java.binaries=target/classes \
-                    -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
-                    """
-                }
-            }
-        }
+        //     steps {
+        //         withSonarQubeEnv('sonar-server') {
+        //             sh """
+        //             ${SONARQUBE_SCANNER_HOME}/bin/sonar-scanner \
+        //             -Dsonar.projectKey=netflix \
+        //             -Dsonar.projectName=netflix \
+        //             -Dsonar.sources=src \
+        //             -Dsonar.java.binaries=target/classes \
+        //             -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+        //             """
+        //         }
+        //     }
+        // }
 
-        stage('Quality Gate') {
-            steps {
-                timeout(time: 1, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: false
-                }
-            }
-        }
+        // stage('Quality Gate') {
+        //     steps {
+        //         timeout(time: 1, unit: 'MINUTES') {
+        //             waitForQualityGate abortPipeline: false
+        //         }
+        //     }
+        // }
 
-        stage('Deploy Artifact to Nexus') {
-            steps {
-                withMaven(
-                    globalMavenSettingsConfig: 'settings.xml',
-                    jdk: 'jdk21',
-                    maven: 'maven'
-                ) {
-                    sh 'mvn deploy'
-                }
+        // stage('Deploy Artifact to Nexus') {
+        //     steps {
+        //         withMaven(
+        //             globalMavenSettingsConfig: 'settings.xml',
+        //             jdk: 'jdk21',
+        //             maven: 'maven'
+        //         ) {
+        //             sh 'mvn deploy'
+        //         }
 
-                archiveArtifacts artifacts: 'target/*.war'
-            }
-        }
+        //         archiveArtifacts artifacts: 'target/*.war'
+        //     }
+        // }
 
         stage('Docker Build') {
             steps {

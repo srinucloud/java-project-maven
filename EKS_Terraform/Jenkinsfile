@@ -1,0 +1,124 @@
+pipeline {
+
+    agent { label 'node2' }
+
+    environment {
+        AWS_REGION = 'us-east-2'
+        TF_DIR = 'EKS_Terraform'
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/srinucloud/java-project-maven.git'
+            }
+        }
+
+        stage('Terraform Version') {
+            steps {
+                sh '''
+                    terraform version
+                    aws --version
+                    kubectl version --client
+                '''
+            }
+        }
+
+        stage('Terraform Init') {
+            steps {
+                dir("${TF_DIR}") {
+                    sh 'terraform init'
+                }
+            }
+        }
+
+        stage('Terraform Validate') {
+            steps {
+                dir("${TF_DIR}") {
+                    sh 'terraform validate'
+                }
+            }
+        }
+
+        stage('Terraform Format') {
+            steps {
+                dir("${TF_DIR}") {
+                    sh 'terraform fmt'
+                }
+            }
+        }
+
+        stage('Terraform Plan') {
+            when {
+                expression { ACTION == 'PLAN' || ACTION == 'APPLY' }
+            }
+
+            steps {
+                dir("${TF_DIR}") {
+                    sh 'terraform plan -out=tfplan'
+                }
+            }
+        }
+
+        stage('Terraform Apply') {
+            when {
+                expression { ACTION == 'APPLY' }
+            }
+
+            steps {
+                input message: 'Do you want to create the EKS Cluster?'
+
+                dir("${TF_DIR}") {
+                    sh 'terraform apply -auto-approve tfplan'
+                }
+            }
+        }
+
+        stage('Configure kubectl') {
+            when {
+                expression { ACTION == 'APPLY' }
+            }
+
+            steps {
+                sh '''
+                    aws eks update-kubeconfig \
+                    --region ${AWS_REGION} \
+                    --name EKS_CLUSTER
+
+                    kubectl get nodes
+                '''
+            }
+        }
+
+        stage('Terraform Destroy') {
+            when {
+                expression { ACTION == 'DESTROY' }
+            }
+
+            steps {
+                input message: 'Do you really want to destroy the EKS Cluster?'
+
+                dir("${TF_DIR}") {
+                    sh 'terraform destroy -auto-approve'
+                }
+            }
+        }
+    }
+
+    post {
+
+        success {
+            echo 'Terraform Pipeline Completed Successfully.'
+        }
+
+        failure {
+            echo 'Terraform Pipeline Failed.'
+        }
+
+        always {
+            cleanWs()
+        }
+    }
+}

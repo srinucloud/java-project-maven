@@ -2,6 +2,11 @@ pipeline {
 
     agent { label 'node1' }
 
+    tools {
+            jdk 'jdk21'
+            maven 'maven'
+   }
+
     stages {
 
         stage('Git Checkout') {
@@ -12,11 +17,6 @@ pipeline {
         }
 
         stage('Build & Unit Test') {
-            tools {
-                jdk 'jdk21'
-                maven 'maven'
-            }
-
             steps {
                 sh 'mvn clean verify'
                 junit 'target/surefire-reports/*.xml'
@@ -45,17 +45,12 @@ pipeline {
         stage('Quality Gate') {
             steps {
                 timeout(time: 1, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: false
+                    waitForQualityGate abortPipeline: true
                 }
             }
         }
 
         stage('Deploy Artifact to Nexus') {
-            tools {
-                jdk 'jdk21'
-                maven 'maven'
-            }
-
             steps {
                 withMaven(
                     globalMavenSettingsConfig: 'settings.xml',

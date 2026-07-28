@@ -33,10 +33,6 @@ pipeline {
         }
 
         stage('SonarQube Analysis') {
-            agent {
-                label 'node1'
-            }
-
             environment {
                 SONARQUBE_SCANNER_HOME = tool 'sonar-scanner'
             }
@@ -60,21 +56,17 @@ pipeline {
             }
         }
 
-        // stage('Quality Gate') {
-        //     agent none
+        stage('Quality Gate') {
+            agent none
 
-        //     steps {
-        //         timeout(time: 1, unit: 'MINUTES') {
-        //             waitForQualityGate abortPipeline: false
-        //         }
-        //     }
-        // }
+            steps {
+                timeout(time: 1, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: false
+                }
+            }
+        }
 
         stage('Deploy Artifact to Nexus') {
-            agent {
-                label 'node1'
-            }
-
             tools {
                 jdk 'jdk21'
                 maven 'maven'
@@ -99,7 +91,7 @@ pipeline {
         
         stage('Docker Build') {
             agent {
-                label 'node2'
+                label 'node1'
             }
             steps {
                 unstash 'source'
@@ -116,18 +108,18 @@ pipeline {
         }
 
         stage('Trivy Image Scan') {
-    agent { label 'node1' }
-
-    steps {
-        sh '''
-            trivy image \
-            --format table \
-            -o trivy-image-report.txt \
-            srinu0930/netflixproject:latest
-        '''
-
-        // archiveArtifacts artifacts: 'trivy-image-report.txt'
-    }
-}
+                agent { label 'node1' }
+            
+                steps {
+                    sh '''
+                        trivy image \
+                        --format table \
+                        -o trivy-image-report.txt \
+                        srinu0930/netflixproject:latest
+                    '''
+            
+                    // archiveArtifacts artifacts: 'trivy-image-report.txt'
+                }
+            }
     }
 }

@@ -49,8 +49,8 @@ pipeline {
 
                     sh """
                     ${SONARQUBE_SCANNER_HOME}/bin/sonar-scanner \
-                    -Dsonar.projectKey=hotstar \
-                    -Dsonar.projectName=hotstar \
+                    -Dsonar.projectKey=netflix \
+                    -Dsonar.projectName=netflix \
                     -Dsonar.sources=src \
                     -Dsonar.java.binaries=target/classes \
                     -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
@@ -105,9 +105,9 @@ pipeline {
                 unstash 'source'
                 withDockerRegistry(credentialsId: 'docker-creds', url: 'https://index.docker.io/v1/') {
                     sh '''
-                        docker build -t calcproject:${BUILD_NUMBER} .
-                        docker tag calcproject:${BUILD_NUMBER} srinu0930/calcproject:${BUILD_NUMBER}
-                        docker push srinu0930/calcproject:${BUILD_NUMBER}
+                        docker build -t netflixproject:${BUILD_NUMBER} .
+                        docker tag netflixproject:${BUILD_NUMBER} srinu0930/netflixproject:latest
+                        docker push srinu0930/netflixproject:latest
                     '''
                     
                 }
@@ -116,14 +116,14 @@ pipeline {
         }
 
         stage('Trivy Image Scan') {
-    agent { label 'node2' }
+    agent { label 'node1' }
 
     steps {
         sh '''
             trivy image \
             --format table \
             -o trivy-image-report.txt \
-            srinu0930/calcproject:${BUILD_NUMBER}
+            srinu0930/netflixproject:latest
         '''
 
         // archiveArtifacts artifacts: 'trivy-image-report.txt'

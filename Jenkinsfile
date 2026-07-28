@@ -1,12 +1,10 @@
 pipeline {
 
-    agent none
+    agent { label 'node1' }
 
     stages {
 
         stage('Git Checkout') {
-            agent { label 'node1' }
-
             steps {
                 git branch: 'main',
                     url: 'https://github.com/srinucloud/java-project-maven.git'
@@ -14,10 +12,6 @@ pipeline {
         }
 
         stage('Build & Unit Test') {
-            agent {
-                label 'node1'
-            }
-
             tools {
                 jdk 'jdk21'
                 maven 'maven'
@@ -25,10 +19,7 @@ pipeline {
 
             steps {
                 sh 'mvn clean verify'
-
                 junit 'target/surefire-reports/*.xml'
-
-                stash name: 'source', includes: '**/*'
             }
         }
 
@@ -38,11 +29,7 @@ pipeline {
             }
 
             steps {
-
-                unstash 'source'
-
                 withSonarQubeEnv('sonar-server') {
-
                     sh """
                     ${SONARQUBE_SCANNER_HOME}/bin/sonar-scanner \
                     -Dsonar.projectKey=netflix \
@@ -51,14 +38,11 @@ pipeline {
                     -Dsonar.java.binaries=target/classes \
                     -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
                     """
-
                 }
             }
         }
 
         stage('Quality Gate') {
-            agent none
-
             steps {
                 timeout(time: 1, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: false
@@ -73,9 +57,6 @@ pipeline {
             }
 
             steps {
-
-                unstash 'source'
-
                 withMaven(
                     globalMavenSettingsConfig: 'settings.xml',
                     jdk: 'jdk21',
@@ -84,42 +65,32 @@ pipeline {
                     sh 'mvn deploy'
                 }
 
-                archiveArtifacts artifacts: 'target/*.war',
-                                 fingerprint: false
+                archiveArtifacts artifacts: 'target/*.war'
             }
         }
-        
+
         stage('Docker Build') {
-            agent {
-                label 'node1'
-            }
             steps {
-                unstash 'source'
                 withDockerRegistry(credentialsId: 'docker-creds', url: 'https://index.docker.io/v1/') {
                     sh '''
                         docker build -t netflixproject:${BUILD_NUMBER} .
                         docker tag netflixproject:${BUILD_NUMBER} srinu0930/netflixproject:latest
                         docker push srinu0930/netflixproject:latest
                     '''
-                    
                 }
-
             }
         }
 
         stage('Trivy Image Scan') {
-                agent { label 'node1' }
-            
-                steps {
-                    sh '''
-                        trivy image \
-                        --format table \
-                        -o trivy-image-report.txt \
-                        srinu0930/netflixproject:latest
-                    '''
-            
-                    // archiveArtifacts artifacts: 'trivy-image-report.txt'
-                }
+            steps {
+                sh '''
+                    trivy image \
+                    --format table \
+                    -o trivy-image-report.txt \
+                    srinu0930/netflixproject:latest
+                '''
+                archiveArtifacts artifacts: 'trivy-image-report.txt'
             }
+        }
     }
 }
